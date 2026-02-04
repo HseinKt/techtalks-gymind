@@ -1,6 +1,6 @@
 ﻿using Npgsql;
 
-namespace GYMIND.API.Api.Data
+namespace GYMIND.API.GYMIND.Infrastructure.Data
 {
     public sealed class DatabaseConnection
     {

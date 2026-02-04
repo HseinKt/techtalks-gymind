@@ -1,5 +1,6 @@
-using GYMIND.API.Api.Data;
+using GYMIND.API.GYMIND.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +20,13 @@ builder.Services.AddDbContext<SupabaseDbContext>(options =>
             npgsqlOptions.EnableRetryOnFailure();
         });
 });
+
+builder.Services.AddControllers()
+    .AddJsonOptions(opt =>
+    {
+        opt.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    });
+
 
 
 
