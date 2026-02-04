@@ -1,0 +1,6 @@
+@GYMIND.API_HostAddress = http://localhost:5116
+
+GET {{GYMIND.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
