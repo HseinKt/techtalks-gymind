@@ -1,6 +1,16 @@
 const Login = () => {
+    const handleSubmit = () => {
+        
+    }
     return ( 
-        <div>Login Page</div>
+        <div>
+            Login Page
+
+            <form onSubmit={handleSubmit}>
+                <input type="text" />
+                <input type="text" />
+            </form>
+        </div>
      );
 }
  
