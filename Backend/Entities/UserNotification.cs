@@ -2,6 +2,7 @@
 {
     public class UserNotification
     {
+        public int UserNotificationID { get; set; }
         public Guid UserID { get; set; }
         public Guid NotificationID { get; set; }
         public bool ReadStatus { get; set; }

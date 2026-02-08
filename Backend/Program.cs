@@ -1,4 +1,7 @@
-using GYMIND.API.GYMIND.Infrastructure.Data;
+using GYMIND.API.Interfaces;
+using GYMIND.API.GYMIND.Application.Service;
+using GYMIND.API.GYMIND.Application.Services;
+using GYMIND.API.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
@@ -21,11 +24,21 @@ builder.Services.AddDbContext<SupabaseDbContext>(options =>
         });
 });
 
+
+// Register Controllers
 builder.Services.AddControllers()
     .AddJsonOptions(opt =>
     {
         opt.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
     });
+
+//Register Services
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+
+
+// Swagger/OpenAPI configuration
+builder.Services.AddEndpointsApiExplorer();
 
 
 
@@ -36,6 +49,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    
 }
 
 app.UseHttpsRedirection();
