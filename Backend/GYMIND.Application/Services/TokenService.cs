@@ -19,7 +19,7 @@ namespace GYMIND.API.GYMIND.Application.Services
         }
 
         // execution of this method will create a JWT token for the authenticated user, including their roles as claims
-        public string CreateToken(User user, IList<UserRole> userRoles)
+        public string CreateToken(User user, IEnumerable<UserRole> userRoles)
         {
             var claims = new List<Claim>
             {

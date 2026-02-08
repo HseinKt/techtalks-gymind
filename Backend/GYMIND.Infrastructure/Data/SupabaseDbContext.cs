@@ -1,59 +1,39 @@
+
 using Microsoft.EntityFrameworkCore;
 using GYMIND.API.Entities;
 using System.Text.Json;
 
-public class SupabaseDbContext : DbContext
+namespace GYMIND.API.GYMIND.Infrastructure.Data
 {
-    public SupabaseDbContext(DbContextOptions<SupabaseDbContext> options)
-        : base(options) { }
 
-    public DbSet<Role> Roles => Set<Role>();
-    public DbSet<User> Users => Set<User>();
-    public DbSet<UserRole> UserRoles => Set<UserRole>();
-    public DbSet<Gym> Gyms => Set<Gym>();
-    public DbSet<Location> Locations => Set<Location>();
-    public DbSet<GymBranch> GymBranches => Set<GymBranch>();
-    public DbSet<Membership> Memberships => Set<Membership>();
-    public DbSet<GymSession> GymSessions => Set<GymSession>();
-    public DbSet<TrafficTrack> TrafficTracks => Set<TrafficTrack>();
-    public DbSet<Announcement> Announcements => Set<Announcement>();
-    public DbSet<Notification> Notifications => Set<Notification>();
-    public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
-    public DbSet<GymAdminAction> GymAdminActions => Set<GymAdminAction>();
-    public DbSet<SystemAdminAction> SystemAdminActions => Set<SystemAdminAction>();
-
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    public class SupabaseDbContext : DbContext
     {
-        modelBuilder.HasPostgresExtension("uuid-ossp");
+        public SupabaseDbContext(DbContextOptions<SupabaseDbContext> options)
+            : base(options) { }
 
-        modelBuilder.Entity<UserRole>()
-            .HasIndex(ur => new { ur.UserID, ur.RoleID })
-            .IsUnique();
+        public DbSet<User> Users { get; set; } = null!;
+        
+        public DbSet<UserRole> UserRole { get; set; } = null!;
+        public DbSet<UserNotification> UserNotifications { get; set; } = null!;
+        public DbSet<Notification> Notifications { get; set; } = null!;
+        public DbSet<Announcement> Announcements { get; set; } = null!;
+        public DbSet<Gym> Gyms { get; set; } = null!;
+        public DbSet<GymBranch> GymBranches { get; set; } = null!;
+        public DbSet<Membership> Memberships { get; set; } = null!;
+        public DbSet<Location> Locations { get; set; } = null!;
+        public DbSet<TrafficTrack> TrafficTracks { get; set; } = null!;
+        public DbSet<SystemAdminAction> SystemAdminActions { get; set; } = null!;
+        public DbSet<GymAdminAction> GymAdminActions { get; set; } = null!;
+        public DbSet<GymSession> GymSessions { get; set; } = null!;
 
-        modelBuilder.Entity<UserNotification>()
-            .HasKey(un => new { un.UserID, un.NotificationID });
 
-        modelBuilder.Entity<GymBranch>()
-            .Property(gb => gb.OperatingHours)
-            .HasColumnType("jsonb");
-
-        modelBuilder.Entity<User>(entity =>
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            entity.ToTable("users"); // table name
+            base.OnModelCreating(modelBuilder);
+            modelBuilder.HasPostgresExtension("uuid-ossp");
 
-            entity.Property(u => u.UserID).HasColumnName("userid");
-            entity.Property(u => u.FullName).HasColumnName("fullname");
-            entity.Property(u => u.Email).HasColumnName("email");
-            entity.Property(u => u.Phone).HasColumnName("phone");
-            entity.Property(u => u.PasswordHash).HasColumnName("passwordhash");
-            entity.Property(u => u.Location).HasColumnName("location");
-            entity.Property(u => u.DateOfBirth).HasColumnName("dateofbirth");
-            entity.Property(u => u.MembershipID).HasColumnName("membershipid");
-            entity.Property(u => u.Gender).HasColumnName("gender");
-            entity.Property(u => u.RoleID).HasColumnName("roleid");
-            entity.Property(u => u.CreatedAt).HasColumnName("createdat");
-            entity.Property(u => u.IsActive).HasColumnName("isactive");
-        });
+            modelBuilder.ApplyConfigurationsFromAssembly(typeof(SupabaseDbContext).Assembly);
 
+        }
     }
 }

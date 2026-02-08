@@ -1,147 +1,75 @@
+using GYMIND.API.GYMIND.DTOs;
+using GYMIND.API.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using GYMIND.API.Entities;
-using GYMIND.API.GYMIND.API.DTOs;
-using BCrypt.Net;
-using System;
+using Microsoft.Extensions.Logging;
 
-[ApiController]
-[Route("api/[controller]")]
-public class UsersController : ControllerBase
+namespace GYMIND.API.GYMIND.API.Controllers
 {
-    private readonly SupabaseDbContext _context;
 
-    public UsersController(SupabaseDbContext context)
+    [ApiController]
+    [Route("api/[controller]")]
+    public class UsersController : ControllerBase
     {
-        _context = context;
-    }
+        private readonly IUserService _userService;
+        private readonly ILogger<UsersController> _logger;
 
-
-    //Get all active users       
-    [HttpGet]
-    public async Task<IActionResult> GetUsers()
-    {
-        var users = await _context.Users
-            .Where(u => u.IsActive)
-            .Select(u => new
-            {
-                u.UserID,
-                u.FullName,
-                u.Email,
-                u.Phone,
-                u.CreatedAt,
-                u.RoleID
-            })
-            .ToListAsync();
-
-        return Ok(users);
-    }
-
-    //Get user by ID
-    [HttpGet("{id:guid}")]
-    public async Task<IActionResult> GetUser(Guid id)
-    {
-        var user = await _context.Users
-            .Where(u => u.UserID == id && u.IsActive)
-            .Select(u => new
-            {
-                u.UserID,
-                u.FullName,
-                u.Email,
-                u.Phone,
-                u.CreatedAt,
-                u.RoleID
-            })
-            .FirstOrDefaultAsync();
-
-        if (user == null)
-            return NotFound();
-
-        return Ok(user);
-    }
-
-
-
-
-    //Create new user
-    [HttpPost]
-    public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto)
-    {
-        if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
-            return BadRequest("Email already exists.");
-
-        var user = new User
+        public UsersController(IUserService userService, ILogger<UsersController> logger)
         {
-            UserID = Guid.NewGuid(),
-            FullName = dto.FullName,
-            Email = dto.Email,
-            Phone = dto.Phone,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-            DateOfBirth = dto.DateOfBirth.HasValue
-            ? DateTime.SpecifyKind(dto.DateOfBirth.Value, DateTimeKind.Utc) : null,
+            _userService = userService;
+            _logger = logger;
+        }
 
-            Location = dto.Location,
-            RoleID = 2, // => Default role as 'Member', Changed by admins through sqlqueries
-            CreatedAt = DateTime.UtcNow,
-            IsActive = true
-        };
+        [HttpGet]
+        public async Task<IActionResult> GetUsers()
+            => Ok(await _userService.GetAllUsersAsync());
 
-        _context.Users.Add(user);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetUser), new { id = user.UserID }, new
+        [HttpGet("{id:guid}")]
+        public async Task<IActionResult> GetUser(Guid id)
         {
-            user.UserID,
-            user.FullName,
-            user.Email,
-            user.Phone,
-            user.DateOfBirth,
-            user.Location,
-            user.RoleID,
-            user.CreatedAt
-        });
+            var user = await _userService.GetUserByIdAsync(id);
+            if (user == null) return NotFound();
+            return Ok(user);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto)
+        {
+            try
+            {
+                var user = await _userService.CreateUserAsync(dto);
+                return CreatedAtAction(nameof(GetUser), new { id = user.UserID }, user);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating user for email {Email}", dto?.Email);
+                return StatusCode(500, "An error occurred while creating the user.");
+            }
+        }
+
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromBody] LoginRequestDto dto)
+        {
+            var token = await _userService.LoginAsync(dto);
+            if (token == null) return Unauthorized("Invalid email or passowrd.");
+            return Ok(new { token });
+
+        }
+
+        [HttpPut("{id:guid}")]
+        public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpdateUserDto dto)
+        {
+            var success = await _userService.UpdateUserAsync(id,
+                                                             dto);
+            if (!success) return NotFound();
+            return NoContent();
+        }
+
+        [HttpPut("{id:guid}/deactivate")]
+        public async Task<IActionResult> DeactivateUser(Guid id)
+        {
+            var success = await _userService.DeactivateUserAsync(id);
+            if (!success) return NotFound();
+            return NoContent();
+        }
     }
-
-    //Update user information (except email and password)
-    [HttpPut("{id:guid}")]
-    public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpdateUserDto dto)
-    {
-        var user = await _context.Users.FindAsync(id);
-
-        if (user == null || !user.IsActive)
-            return NotFound();
-
-        if (!string.IsNullOrEmpty(dto.FullName))
-            user.FullName = dto.FullName;
-
-        if (!string.IsNullOrEmpty(dto.Phone))
-            user.Phone = dto.Phone;
-
-        if (dto.RoleID.HasValue)
-            user.RoleID = dto.RoleID.Value;
-
-        await _context.SaveChangesAsync();
-
-        return NoContent();
-    }
-
-    // Deactivate user 
-    [HttpPut("{id:guid}/deactivate")]
-    public async Task<IActionResult> DeactivateUser(Guid id)
-    {
-        var user = await _context.Users.FindAsync(id);
-
-        if (user == null)
-            return NotFound();
-
-        user.IsActive = false;
-        await _context.SaveChangesAsync();
-
-        return NoContent();
-    }
-
-    
-    
 }
-
-
