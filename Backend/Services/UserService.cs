@@ -1,43 +1,109 @@
-using GYMIND.API.DTOs;
-using GYMIND.API.Interfaces;
-using GYMIND.API.Entities;
-using Microsoft.EntityFrameworkCore;
-using GYMIND.API.Data;
-
 using BCrypt.Net;
+using GYMIND.API.Data;
+using GYMIND.API.DTOs;
+using GYMIND.API.Entities;
+using GYMIND.API.Interfaces;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
 
-namespace GYMIND.API.GYMIND.Application.Service
+namespace GYMIND.API.Service
 {
 
     public class UserService : IUserService
     {
         private readonly SupabaseDbContext _context;
         private readonly ITokenService _tokenService;
+        private readonly Supabase.Client _supabase;
 
-        public UserService(SupabaseDbContext context, ITokenService tokenService)
+        public UserService(SupabaseDbContext context, ITokenService tokenService, Supabase.Client supabase)
         {
             _context = context;
             _tokenService = tokenService;
+            _supabase = supabase;
         }
 
-        public async Task<string?> LoginAsync(LoginRequestDto dto)
+        public async Task<string?> RefreshTokenAsync(Guid userId)
         {
             var user = await _context.Users
                 .Include(u => u.UserRole)
                 .ThenInclude(ur => ur.Role)
-                .FirstOrDefaultAsync(u => u.Email == dto.Email && u.IsActive);
+                .FirstOrDefaultAsync(u => u.UserID == userId && u.IsActive);
 
             if (user == null) return null;
-            if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash)) return null;
 
-            return _tokenService.CreateToken(user, user.UserRole);
+            return _tokenService.CreateToken(user, user.UserRole); // generate new token
+
         }
 
-        public async Task<IEnumerable<UserResponseDto>> GetAllUsersAsync()
+        public async Task<AuthResponseDto?> RefreshTokenAsync(string expiredToken, string refreshToken)
+        {
+            // Validate the expired token and get the UserID (using TokenService helper)
+            var userId = _tokenService.GetUserIdFromExpiredToken(expiredToken);
+
+            var user = await _context.Users
+                .Include(u => u.UserRole).ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.UserID == userId);
+
+            // Does the token match what's in the DB? Is it expired?
+            if (user == null || user.RefreshToken != refreshToken || user.RefreshTokenExpiry <= DateTime.UtcNow)
+                return null;
+
+            // Generate NEW pair (Rotation)
+            var newAccessToken = _tokenService.CreateToken(user, user.UserRole);
+            var newRefreshToken = GenerateRefreshToken();
+
+            user.RefreshToken = newRefreshToken;
+            await _context.SaveChangesAsync();
+
+            return new AuthResponseDto
+            {
+                Token = newAccessToken,
+                RefreshToken = newRefreshToken,
+                Roles = user.UserRole.Select(ur => ur.Role.Name).ToList()
+            };
+        }
+
+        public async Task<AuthResponseDto?> LoginAsync(LoginRequestDto dto)
+        {
+            var user = await _context.Users
+                .Include(u => u.UserRole).ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Email == dto.Email && u.IsActive);
+
+            if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
+                return null;
+
+            // 1. Generate Access Token (Short-lived: 1 hour)
+            var accessToken = _tokenService.CreateToken(user, user.UserRole);
+
+            // 2. Generate Refresh Token (Long-lived: 7 days)
+            var refreshToken = GenerateRefreshToken();
+
+            // 3. Save to DB
+            user.RefreshToken = refreshToken;
+            user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
+            await _context.SaveChangesAsync();
+
+            return new AuthResponseDto
+            {
+                Token = accessToken,
+                RefreshToken = refreshToken, 
+                Roles = user.UserRole.Select(ur => ur.Role.Name).ToList()
+            };
+        }
+
+        private string GenerateRefreshToken()
+        {
+            var randomNumber = new byte[64];
+            using var rng = RandomNumberGenerator.Create();
+            rng.GetBytes(randomNumber);
+            return Convert.ToBase64String(randomNumber);
+        }
+
+        public async Task<IEnumerable<GetUserDto>> GetAllUsersAsync()
         {
             return await _context.Users
                 .Where(u => u.IsActive)
-                .Select(u => new UserResponseDto
+                .Select(u => new GetUserDto
                 {
                     UserID = u.UserID,
                     FullName = u.FullName,
@@ -50,7 +116,7 @@ namespace GYMIND.API.GYMIND.Application.Service
                 .ToListAsync();
         }
 
-        public async Task<UserResponseDto?> GetUserByIdAsync(Guid id)
+        public async Task<GetUserDto?> GetUserByIdAsync(Guid id)
         {
             var user = await _context.Users
                 .Include(u => u.UserRole)        // load the join table
@@ -59,19 +125,19 @@ namespace GYMIND.API.GYMIND.Application.Service
 
             if (user == null) return null;
 
-            return new UserResponseDto
+            return new GetUserDto
             {
                 UserID = user.UserID,
                 FullName = user.FullName,
                 Email = user.Email,
                 Phone = user.Phone,
                 CreatedAt = user.CreatedAt,
-                Roles = user.UserRole.Select(ur => ur.RoleID).ToList()  
+                Roles = user.UserRole.Select(ur => ur.RoleID).ToList()
             };
         }
 
 
-        public async Task<UserResponseDto> CreateUserAsync(CreateUserDto dto)
+        public async Task<GetUserDto> CreateUserAsync(CreateUserDto dto)
         {
             if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
                 throw new Exception("Email already exists");
@@ -86,7 +152,7 @@ namespace GYMIND.API.GYMIND.Application.Service
                 DateOfBirth = dto.DateOfBirth.HasValue
                     ? DateTime.SpecifyKind(dto.DateOfBirth.Value, DateTimeKind.Utc) : null,
                 Location = dto.Location,
-                
+                Gender = dto.Gender,
                 CreatedAt = DateTime.UtcNow,
                 IsActive = true
             };
@@ -109,47 +175,61 @@ namespace GYMIND.API.GYMIND.Application.Service
                 throw;
             }
 
-            return new UserResponseDto
+            return new GetUserDto
             {
                 UserID = user.UserID,
                 FullName = user.FullName,
                 Email = user.Email,
                 Phone = user.Phone,
                 CreatedAt = user.CreatedAt,
-                Roles = user.UserRole.Select(ur => ur.RoleID).ToList(),
+                Roles = user.UserRole.Select(ur => ur.RoleID).ToList(),  // we will edit this later when we have proper role management
             };
         }
 
         public async Task<bool> UpdateUserAsync(Guid id, UpdateUserDto dto)
         {
+            // 1. INPUT THE GUID: We use the ID to pull the specific row from the DB
             var user = await _context.Users
                 .Include(u => u.UserRole)
                 .FirstOrDefaultAsync(u => u.UserID == id);
 
-            if (user == null || !user.IsActive)
-                return false;
+            // 2. CHECK: If the ID doesn't exist, we can't edit anything
+            if (user == null) return false;
 
-            if (!string.IsNullOrEmpty(dto.FullName))
+            // 3. EDIT NAME: Overwrite the name column if a new one is provided
+            if (!string.IsNullOrWhiteSpace(dto.FullName))
                 user.FullName = dto.FullName;
 
-            if (!string.IsNullOrEmpty(dto.Phone))
+            // 4. EDIT PHONE: Overwrite the phone column
+            if (!string.IsNullOrWhiteSpace(dto.Phone))
                 user.Phone = dto.Phone;
 
+            // 5. EDIT ROLES: 
+            // If the admin sends [1, 2], and user only had [1], this adds [2].
             if (dto.RoleIDs != null)
             {
-                _context.UserRole.RemoveRange(user.UserRole);
+                var targetRoleIds = dto.RoleIDs.ToHashSet();
+                var currentRoleIds = user.UserRole.Select(ur => ur.RoleID).ToHashSet();
 
-                user.UserRole = dto.RoleIDs.Select(roleId => new UserRole
-                {
-                    RoleID = roleId,
-                    UserID = user.UserID
-                }).ToList();
+                // Remove roles not in the new list
+                var toRemove = user.UserRole.Where(ur => !targetRoleIds.Contains(ur.RoleID)).ToList();
+                _context.UserRole.RemoveRange(toRemove);
+
+                // Add roles that are new
+                var toAdd = targetRoleIds
+                    .Where(rid => !currentRoleIds.Contains(rid))
+                    .Select(rid => new UserRole { RoleID = rid, UserID = user.UserID })
+                    .ToList();
+
+                await _context.UserRole.AddRangeAsync(toAdd);
             }
-                
 
+            
             await _context.SaveChangesAsync();
             return true;
         }
+
+
 
         public async Task<bool> DeactivateUserAsync(Guid id)
         {
@@ -157,6 +237,42 @@ namespace GYMIND.API.GYMIND.Application.Service
             if (user == null) return false;
 
             user.IsActive = false;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+
+        public async Task<bool> UpdateProfileAsync(Guid userId, EditProfileDto dto)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null) return false;
+
+            // Handle Image Upload to Supabase Storage
+            if (dto.ImageFile != null)
+            {
+                var fileName = $"{userId}/profilepictureurl_{DateTime.UtcNow.Ticks}.jpg";
+
+                using var stream = new MemoryStream();
+                await dto.ImageFile.CopyToAsync(stream);
+
+                stream.Position = 0; 
+                var fileBytes = stream.ToArray();
+
+                await _supabase.Storage
+                      .From("profilepictureurl")
+                      .Upload(fileBytes, fileName, new Supabase.Storage.FileOptions { Upsert = true });
+
+                var publicUrl = _supabase.Storage.From("profilepictureurl").GetPublicUrl(fileName);
+                user.ProfilePictureUrl = publicUrl;
+            }
+
+            // Update other fields
+            user.Biography = dto.Biography ?? user.Biography;
+            user.MedicalConditions = dto.MedicalConditions ?? user.MedicalConditions;
+            user.EmergencyContact = dto.EmergencyContact ?? user.EmergencyContact;
+
+            _context.Entry(user).State = EntityState.Modified;
+
             await _context.SaveChangesAsync();
             return true;
         }
