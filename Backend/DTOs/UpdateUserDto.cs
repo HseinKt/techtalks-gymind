@@ -1,10 +1,16 @@
-﻿namespace GYMIND.API.DTOs
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace GYMIND.API.DTOs
 {
-    public class UpdateUserDto
+    // For admins to assign roles to users
+    public class UpdateUserDto // edit later for stricter validation
     {
         public string? FullName { get; set; }
+        
         public string? Phone { get; set; }
-        public List<int>? RoleIDs { get; set; }
-    }
 
+
+        // Takes different role IDs to add/remove from user. no duplicates allowed. if roleID is already assigned to user, it will be removed. 
+        public HashSet<int> RoleIDs { get; set; } = new HashSet<int>();
+    }
 }

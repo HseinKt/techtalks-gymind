@@ -6,7 +6,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Collections.Generic;
 
-namespace GYMIND.API.GYMIND.Application.Services
+namespace GYMIND.API.Services
 {
     // Standard TokenService responsible for generating JWT tokens for authenticated users
     public class TokenService : ITokenService
@@ -51,6 +51,36 @@ namespace GYMIND.API.GYMIND.Application.Services
             var token = tokenHandler.CreateToken(tokenDescriptor);
 
             return tokenHandler.WriteToken(token);
+        }
+
+        public Guid GetUserIdFromExpiredToken(string token)
+        {
+            // We need to validate the token without checking its expiration, so we set ValidateLifetime to false
+            var tokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateAudience = false,
+                ValidateIssuer = false,
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!)),
+                ValidateLifetime = false 
+            };
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out SecurityToken securityToken);
+
+            // Ensure the token is a valid JWT and uses the expected signing algorithm
+            if (securityToken is not JwtSecurityToken jwtSecurityToken ||
+                !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
+            {
+                throw new SecurityTokenException("Invalid token");
+            }
+
+            var userIdClaim = principal.FindFirst(JwtRegisteredClaimNames.NameId)?.Value;
+
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+                throw new SecurityTokenException("User ID claim not found in token");
+
+            return userId;
         }
     }
 }
