@@ -175,7 +175,7 @@ namespace GYMIND.API.Service
             }
             catch (DbUpdateException ex)
             {
-                Console.WriteLine(ex.InnerException?.Message ?? ex.Message);
+                Console.WriteLine(ex.InnerException?.Message ?? ex.Message); // returning message to be chaanged later for better error handling and security
                 throw;
             }
 
@@ -190,7 +190,7 @@ namespace GYMIND.API.Service
             };
         }
 
-        public async Task<bool> UpdateUserAsync(Guid id, UpdateUserDto dto)
+        public async Task<bool> UpdateUserAsync(Guid id, UpdateUserDto dto) // for admin
         {
             // 1. INPUT THE GUID: We use the ID to pull the specific row from the DB
             var user = await _context.Users
@@ -228,8 +228,8 @@ namespace GYMIND.API.Service
                 await _context.UserRole.AddRangeAsync(toAdd);
             }
 
-            
-            await _context.SaveChangesAsync();
+
+            int changes = await _context.SaveChangesAsync();
             return true;
         }
 

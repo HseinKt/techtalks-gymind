@@ -32,7 +32,7 @@ namespace GYMIND.API.Controllers
             return Ok(gym);
         }
 
-        [HttpGet("name/{name}")]
+        [HttpGet("name")]
         public async Task<IActionResult> GetGymByName(string name)
         {
             var gym = await _gymService.GetGymByNameAsync(name);
@@ -42,7 +42,7 @@ namespace GYMIND.API.Controllers
             return Ok(gym);
         }
 
-        [HttpGet("address/{address}")]
+        [HttpGet("address")]
         public async Task<IActionResult> GetGymByAddress(string address)
         {
             var gyms = await _gymService.GetGymsByAddressAsync(address);
