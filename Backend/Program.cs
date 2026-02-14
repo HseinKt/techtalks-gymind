@@ -38,7 +38,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? "dev-secret-key-change-me")),
+
             ValidateIssuer = true,
             ValidIssuer = "GYMIND",
             ValidateAudience = true,
@@ -60,8 +61,8 @@ builder.Services.AddControllers()
 
 
 // supabase client configuration
-var supabaseUrl = builder.Configuration["Supabase:Url"];
-var supabaseKey = builder.Configuration["Supabase:Key"];
+var supabaseUrl = builder.Configuration["Supabase:Url"] ?? "https://lenkowmwwestokaccvjm.supabase.co";
+var supabaseKey = builder.Configuration["Supabase:Key"] ?? "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxlbmtvd213d2VzdG9rYWNjdmptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5Nzk3NTUsImV4cCI6MjA4NTU1NTc1NX0.XnPdEHk6i9XMGdFPK41bYPP0ZqffW9CL_1_4tX7RCIE";
 
 builder.Services.AddScoped(_ => new Supabase.Client(supabaseUrl, supabaseKey));
 

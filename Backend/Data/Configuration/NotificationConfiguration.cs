@@ -11,7 +11,7 @@ namespace GYMIND.API.Data.Configuration
             entity.HasKey(n => n.NotificationID);
             entity.Property(n => n.NotificationID).HasColumnName("notificationid");
             entity.Property(n => n.UserID).HasColumnName("userid");
-            entity.Property(n => n.GymId).HasColumnName("gymid");
+            //entity.Property(n => n.GymId).HasColumnName("gymid");
             entity.Property(n => n.GymBranchID).HasColumnName("gymbranchid");
 
             // Optional relationships (Guid?)

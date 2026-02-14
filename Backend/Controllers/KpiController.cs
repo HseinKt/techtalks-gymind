@@ -19,19 +19,37 @@ namespace GYMIND.API.Controllers
         [HttpPost("branch-traffic-now")]
         public async Task<IActionResult> BranchTrafficNow([FromBody] KpiBranchTrafficNowRequestDto req)
         {
-            var rpc = await _supabase.Rpc("kpi_branch_traffic_now", new { p_gymbranchid = req.GymBranchId });
+            if (req == null || req.GymBranchId == Guid.Empty)
+                return BadRequest(new { message = "GymBranchId is required." });
 
-        
-            var json = JsonSerializer.Serialize(rpc);
-            var rows = JsonSerializer.Deserialize<List<KpiBranchTrafficNowRowDto>>(json, new JsonSerializerOptions
+            try
             {
-                PropertyNameCaseInsensitive = true
-            }) ?? new List<KpiBranchTrafficNowRowDto>();
+                // Call Supabase RPC function
+                var rpc = await _supabase.Rpc(
+                    "kpi_branch_traffic_now",
+                    new { p_gymbranchid = req.GymBranchId }
+                );
 
-            if (rows.Count == 0)
-                return NotFound(new { message = "No traffic data found for this branch." });
+                // ✅ Deserialize the JSON payload returned by Supabase (NOT the response wrapper)
+                var rows = JsonSerializer.Deserialize<List<KpiBranchTrafficNowRowDto>>(
+                    rpc.Content,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                ) ?? new List<KpiBranchTrafficNowRowDto>();
 
-            return Ok(rows[0]);
+                if (rows.Count == 0)
+                    return NotFound(new { message = "No traffic data found for this branch." });
+
+                return Ok(rows[0]);
+            }
+            catch (Exception ex)
+            {
+                // Temporary debug response (remove detailed errors in production)
+                return StatusCode(500, new
+                {
+                    message = "KPI RPC failed.",
+                    error = ex.Message
+                });
+            }
         }
     }
 }
