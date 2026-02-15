@@ -9,12 +9,17 @@ namespace GYMIND.API.Data.Configuration
         {
             entity.ToTable("gym");
             entity.HasKey(g => g.GymId);
+
             entity.Property(g => g.GymId).HasColumnName("gymid");
-            entity.Property(g => g.IsApproved).HasColumnName("isapproved");
-            entity.Property(g => g.CreatedAt).HasColumnName("createdat");
 
             entity.Property(g => g.Name).HasMaxLength(255).IsRequired().HasColumnName("name");
+            entity.Property(g => g.IsApproved).HasColumnName("isapproved").HasDefaultValue(false);
+            entity.Property(g => g.CreatedAt).HasColumnName("createdat").HasDefaultValueSql("CURRENT_TIMESTAMP");
             
+            entity.HasMany(g => g.Branches)
+                .WithOne(gb => gb.Gym)
+                .HasForeignKey(gb => gb.GymID);
+
         }
     }
 
@@ -27,12 +32,13 @@ namespace GYMIND.API.Data.Configuration
 
             // Mapping JsonDocument for OperatingHours
             entity.Property(gb => gb.OperatingHours).HasColumnType("jsonb");
-            entity.Property(gb => gb.Name).HasColumnName("name");
-            entity.Property(gb => gb.ServiceDescription).HasColumnName("servicedescription");
-            entity.Property(gb => gb.CoverImageUrl).HasColumnName("coverimageurl");
-            entity.Property(gb => gb.IsActive).HasColumnName("isactive");
+
             entity.Property(gb => gb.GymID).HasColumnName("gymid");
             entity.Property(gb => gb.LocationID).HasColumnName("locationid");
+            entity.Property(gb => gb.Name).HasMaxLength(255).IsRequired().HasColumnName("name");
+            entity.Property(gb => gb.ServiceDescription).HasMaxLength(1000).HasColumnName("servicedescription");
+            entity.Property(gb => gb.CoverImageUrl).HasMaxLength(500).HasColumnName("coverimageurl");
+            entity.Property(gb => gb.IsActive).HasColumnName("isactive").HasDefaultValue(true);
 
             entity.HasOne(gb => gb.Gym)
                 .WithMany(g => g.Branches) 
