@@ -7,8 +7,11 @@ namespace GYMIND.API.Data.Configuration
     {
         public void Configure(EntityTypeBuilder<Entities.Gym> entity)
         {
-            entity.ToTable("gyms");
+            entity.ToTable("gym");
             entity.HasKey(g => g.GymId);
+
+            entity.Property(g => g.GymId).HasColumnName("gymid");
+
             entity.Property(g => g.Name).HasMaxLength(255).IsRequired().HasColumnName("name");
             entity.Property(g => g.Address).HasMaxLength(500).IsRequired().HasColumnName("address");
             entity.Property(g => g.IsApproved).HasColumnName("isapproved").HasDefaultValue(false);
@@ -25,11 +28,14 @@ namespace GYMIND.API.Data.Configuration
     {
         public void Configure(EntityTypeBuilder<Entities.GymBranch> entity)
         {
-            entity.ToTable("gymbranches");
+            entity.ToTable("gymbranch");
             entity.HasKey(gb => gb.GymBranchID);
 
             // Mapping JsonDocument for OperatingHours
             entity.Property(gb => gb.OperatingHours).HasColumnType("jsonb");
+            
+            entity.Property(gb => gb.GymID).HasColumnName("gymid");
+            entity.Property(gb => gb.LocationID).HasColumnName("locationid");
             entity.Property(gb => gb.Name).HasMaxLength(255).IsRequired().HasColumnName("name");
             entity.Property(gb => gb.ServiceDescription).HasMaxLength(1000).HasColumnName("servicedescription");
             entity.Property(gb => gb.CoverImageUrl).HasMaxLength(500).HasColumnName("coverimageurl");
