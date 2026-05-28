@@ -1,0 +1,18 @@
+Error: ENOENT: no such file or directory, scandir 'C:\Users\HP\source\repos\techtalks-gymind\mobile\assets'
+    at Object.readdir (node:internal/fs/promises:953:18)
+    at getAbsoluteAssetRecord (C:\Users\HP\source\repos\techtalks-gymind\mobile\node_modules\metro\src\Assets.js:114:17)
+    at getAsset (C:\Users\HP\source\repos\techtalks-gymind\mobile\node_modules\metro\src\Assets.js:224:18)
+    at Server._processSingleAssetRequest (C:\Users\HP\source\repos\techtalks-gymind\mobile\node_modules\metro\src\Server.js:436:20)
+    at Server._processRequest (C:\Users\HP\source\repos\techtalks-gymind\mobile\node_modules\metro\src\Server.js:535:7)
+Error: ENOENT: no such file or directory, scandir 'C:\Users\HP\source\repos\techtalks-gymind\mobile\assets'
+    at Object.readdir (node:internal/fs/promises:953:18)
+    at getAbsoluteAssetRecord (C:\Users\HP\source\repos\techtalks-gymind\mobile\node_modules\metro\src\Assets.js:114:17)
+    at getAsset (C:\Users\HP\source\repos\techtalks-gymind\mobile\node_modules\metro\src\Assets.js:224:18)
+    at Server._processSingleAssetRequest (C:\Users\HP\source\repos\techtalks-gymind\mobile\node_modules\metro\src\Server.js:436:20)
+    at Server._processRequest (C:\Users\HP\source\repos\techtalks-gymind\mobile\node_modules\metro\src\Server.js:535:7)
+Error: ENOENT: no such file or directory, scandir 'C:\Users\HP\source\repos\techtalks-gymind\mobile\assets'
+    at Object.readdir (node:internal/fs/promises:953:18)
+    at getAbsoluteAssetRecord (C:\Users\HP\source\repos\techtalks-gymind\mobile\node_modules\metro\src\Assets.js:114:17)
+    at getAsset (C:\Users\HP\source\repos\techtalks-gymind\mobile\node_modules\metro\src\Assets.js:224:18)
+    at Server._processSingleAssetRequest (C:\Users\HP\source\repos\techtalks-gymind\mobile\node_modules\metro\src\Server.js:436:20)
+    at Server._processRequest (C:\Users\HP\source\repos\techtalks-gymind\mobile\node_modules\metro\src\Server.js:535:7)
