@@ -8,7 +8,7 @@ import { API_ENDPOINTS } from './endpoints';
 import { getAuthTokens } from './tokenProvider';
 
 // On device: localhost points to the phone itself.
-const DEFAULT_API_BASE_URL = 'http://192.168.0.108:7179';
+const DEFAULT_API_BASE_URL = 'http://192.168.10.13:7179';
 
 function normalizeBaseUrl(base: string) {
   const trimmed = base.replace(/\/+$/, '');

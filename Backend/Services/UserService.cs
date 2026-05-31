@@ -74,7 +74,7 @@ namespace GYMIND.API.Service
                 .Include(u => u.UserRole).ThenInclude(ur => ur.Role)
                 .FirstOrDefaultAsync(u => u.Email == dto.Email && u.IsActive);
 
-            if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
+            if (user == null || !VerifyPassword(dto.Password, user.PasswordHash))
                 return null;
 
             // 1. Generate Access Token (Short-lived: 1 hour)
@@ -153,6 +153,21 @@ namespace GYMIND.API.Service
             using var rng = RandomNumberGenerator.Create();
             rng.GetBytes(randomNumber);
             return Convert.ToBase64String(randomNumber);
+        }
+
+        private static bool VerifyPassword(string password, string passwordHash)
+        {
+            if (string.IsNullOrWhiteSpace(passwordHash))
+                return false;
+
+            try
+            {
+                return BCrypt.Net.BCrypt.Verify(password, passwordHash);
+            }
+            catch (SaltParseException)
+            {
+                return false;
+            }
         }
 
 
